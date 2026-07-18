@@ -1,0 +1,14 @@
+# Never commit credentials or tokens
+client_secrets.json
+client_secret*.json
+oauth2.txt
+*.pickle
+token*.json
+
+# Downloaded tools (rclone/GYB binaries) - reinstalled automatically
+tools/
+
+# Run logs and inventories may contain personal data
+logs/
+*.log
+drive-inventory*.csv
