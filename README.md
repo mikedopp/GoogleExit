@@ -16,6 +16,7 @@ downloaded tools, and all logs are gitignored. If you clone this fresh, follow
 | `Invoke-GoogleExport.ps1` | Backs up one account: Gmail via GYB, Drive via rclone (Docs→.docx, Sheets→.xlsx, Slides→.pptx). Incremental — re-runs only fetch new items. |
 | `Get-DriveInventory.ps1` | Read-only listing of everything in a Drive, flagging items the API **cannot** export (My Maps, Forms, Sites, Apps Script) with direct links to save them manually. Run this before wiping. |
 | `Invoke-GoogleCleanup.ps1` | **DESTRUCTIVE.** Re-runs the backup, shows counts, requires typing the email address, then empties Drive (trash + empty trash) and permanently purges all Gmail. |
+| `Invoke-GmailSyncDeletes.ps1` | **DESTRUCTIVE (server-side).** For the keep-the-account-but-prune-it workflow: applies MailVault archive purges to the live Gmail account, matched by Message-ID. Dry-run counts first (`-DryRun`), typed-email confirmation, processed manifest archived so it can't re-apply. |
 
 ## How it works
 
@@ -155,6 +156,21 @@ Every one of these was hit for real while building this.
 | GYB backup dies mid-run | Daily API quota, network, whatever — just re-run; it resumes from the SQLite index. |
 | Storage meter unchanged after wiping | one.google.com/storage takes up to 24 h to update. Emptying Drive **trash** is what frees quota (the cleanup script does this via `rclone cleanup`). |
 | Cleanup refuses to run | By design: no backup folder → refuses; no GYB database → refuses Gmail purge; typed email doesn't match → aborts. Fix the missing backup rather than bypassing the gate. |
+
+## Pruning a live account with MailVault
+
+If an account should stay active but slimmed down (instead of fully purged):
+
+1. Back up with `Invoke-GoogleExport.ps1` as usual.
+2. Curate offline in **MailVault** (`F:\mikedopp\drop\MailVault`): delete junk
+   → trash → Empty trash. Each purge appends the messages' Message-IDs to
+   `_PurgedFromArchive.jsonl` in the backup's Gmail folder.
+3. Preview the server-side effect:
+   `.\Invoke-GmailSyncDeletes.ps1 -Email x@gmail.com -Dest N:\GoogleExport -DryRun`
+4. Run it without `-DryRun` to permanently delete those same messages from
+   the live account (typed-email confirmation required). The manifest is then
+   archived so re-runs can't double-apply; messages without a Message-ID
+   header (rare) are listed for manual handling.
 
 ## Restore / reading the archive
 
